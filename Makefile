@@ -1,0 +1,6 @@
+CC=mpic++
+CFLAGS=-c -Wall
+LDFLAGS=
+SOURCES=src/*
+OBJECTS=$(SOURCES:.cpp=.o)
+EXECUTABLE=bin/N-TR0PY
