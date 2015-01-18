@@ -6,4 +6,4 @@ OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=bin/N-TR0PY
 
 make: src/*
-	mpic++ src/* -o bin/N-TR0PY
+	mpic++ -O3 src/* -o bin/N-TR0PY
