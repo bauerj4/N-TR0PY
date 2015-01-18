@@ -104,7 +104,7 @@ int readASCII(vector<bodies_t>& bodies,string path)
 	  Body.u3 = atof(values[7].c_str());
 	  //cout << "Body velocity 3 allocated. " << endl;
 	 
-	  Body.mass = 1.0;
+	  Body.mass = atof(values[8].c_str());
 	  //cout << "Body properties allocated." << endl;
 	  bodies.push_back(Body);
 	  //cout << "Body pushed." << endl;

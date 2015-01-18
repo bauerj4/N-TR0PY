@@ -14,18 +14,22 @@ using namespace std;
 // Compute the force between body p and q
 
 vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
-{  
+{
+  double G = 4.49e-6; // kpc^3 / Gy^2 M_solar
+
   double dx = p.q1 - q.q1;
   double dy = p.q2 - q.q2;
   double dz = p.q3 - q.q3;
 
   double dr2 = pow(dx,2) + pow(dy,2) + pow(dz,2);
+  printf("The distance is %10.5f.\n", pow(dr2,0.5));
 
-  double forceMag =  (p.mass * q.mass) / (dr2 + eps2);
-  double forceQuotient = forceMag/dr2;
+  double forceMag =  G * (p.mass * q.mass) / (dr2 + eps2);
+  double forceQuotient = -forceMag/pow(dr2,1.0/2.0);
   
   double forceArr[] = {forceQuotient * dx, forceQuotient * dy, forceQuotient * dz};
   vector<double> force(forceArr, forceArr + sizeof(forceArr));
+  //printf("The force is %10.5f.\n", forceMag);
   return force;
 }
 
@@ -96,7 +100,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
     }
 
   
-  printf("My rank is %d, and my search segment is [%d,%d]\n",rank,n0,n1);
+  // printf("My rank is %d, and my search segment is [%d,%d]\n",rank,n0,n1);
   /*
     We now directly compute the forces.  
     It should be noted that this is a 

@@ -64,19 +64,19 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
       N2BruteForce(bodies, forces, NBODY_CONTEXT.init3Volume, NBODY_CONTEXT.eps2);
       for (int i = 0; i<N; i++)
 	{
-	  bodies[i].u1 += forces[i][0] * h;
-	  bodies[i].u2 += forces[i][1] * h;
-	  bodies[i].u3 += forces[i][2] * h;
+	  bodies[i].u1 += 0.9785 * forces[i][0] * h; //Convert u to km/s
+	  bodies[i].u2 += 0.9785 * forces[i][1] * h;
+	  bodies[i].u3 += 0.9785 * forces[i][2] * h;
 
 	  forces[i][0] = 0.0;
 	  forces[i][1] = 0.0;
 	  forces[i][2] = 0.0;
 	  
-	  bodies[i].q1 += bodies[i].u1 * h;
-	  bodies[i].q2 += bodies[i].u2 * h;
-	  bodies[i].q3 += bodies[i].u3 * h;
+	  bodies[i].q1 += 1.022 * bodies[i].u1 * h; // convert u to kpc/Gy
+	  bodies[i].q2 += 1.022 * bodies[i].u2 * h;
+	  bodies[i].q3 += 1.022 * bodies[i].u3 * h;
 
-	  printf("[%10.5f, %10.5f, %10.5f]\n", bodies[i].q1, bodies[i].q2, bodies[i].q3);
+	  //printf("[%10.5f, %10.5f, %10.5f]\n", bodies[i].q1, bodies[i].q2, bodies[i].q3);
 	}
 
       currentTime += h;
