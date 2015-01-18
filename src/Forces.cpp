@@ -13,7 +13,7 @@ using namespace std;
 
 // Compute the force between body p and q
 
-double PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
+vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
 {  
   double dx = p.q1 - q.q1;
   double dy = p.q2 - q.q2;
@@ -21,7 +21,11 @@ double PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
 
   double dr2 = pow(dx,2) + pow(dy,2) + pow(dz,2);
 
-  double force =  (p.mass * q.mass) / (dr2 + eps2);
+  double forceMag =  (p.mass * q.mass) / (dr2 + eps2);
+  double forceQuotient = forceMag/dr2;
+  
+  double forceArr[] = {forceQuotient * dx, forceQuotient * dy, forceQuotient * dz};
+  vector<double> force(forceArr, forceArr + sizeof(forceArr));
   return force;
 }
 
@@ -66,25 +70,36 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
   // Minor efficiency loss for calculating these values on each thread
   
   int remainder = N % nthreads;
+  int block,n0,n1;
 
-  int block = int((N - remainder)/nthreads);
-
-  int n0,n1;
-
-  // partitions the body list.
-  if (rank == (nthreads - 1))
+  if (nthreads == 1)
     {
-      n0 = block * rank;
-      n1 = remainder + block*(rank + 1);
+      n1 = N-1;
+      n0 = 0;
     }
 
   else
     {
-      n0 = block * rank;
-      n1 = n0 + block * (rank + 1);
-    }
-  
+      block = int((N - remainder)/nthreads);
+    
 
+      // partitions the body list.
+      if (rank == (nthreads - 1))
+	{
+	  n0 = block * rank;
+	  n1 = remainder + block*(rank);
+	}
+      
+      else 
+	{
+	  n0 = block * rank;
+	  n1 = n0 + block * (rank);
+	}
+      
+    }
+
+  
+  printf("My rank is %d, and my search segment is [%d,%d]\n",rank,n0,n1);
   /*
     We now directly compute the forces.  
     It should be noted that this is a 
@@ -95,14 +110,19 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
     cost effective for fewer than two threads.
   */
 
-  for (int i = n0; i < (n1 + 1),i++)
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  for (int i = n0; i < (n1 + 1);i++)
     {
-      for (int j = 0; i < N; j++)
+      printf("Computing force on Body %d...\n", bodies[i].id);
+      for (int j = 0; j < N; j++)
 	{
 	  if (i != j) // This is necessary to avoid computing "self" force.
 	    {
-	      vector<vector<double> > force = PairForceCalculation(bodies[i],bodies[j], 0.0); // temporarily set eps2 = 0     
+	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], 0.0); // temporarily set eps2 = 0     
+	      printf("The force is [%10.5f, %10.5f, %10.5f]\n", force[0], force[1], force[2]);
 	    }
+	  
 	}
       
     }

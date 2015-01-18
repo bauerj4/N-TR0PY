@@ -1,7 +1,7 @@
 #include <vector>
 #include "../include/Body.h"
 
-double PairForceCalculation(bodies_t &p, bodies_t &q, double eps2);
+vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2);
 
 int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces,double spaceVolume,  double eps2);
 

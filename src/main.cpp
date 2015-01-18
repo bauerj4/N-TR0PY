@@ -7,7 +7,7 @@ using namespace std;
 
 int main(void)
 {
-  string path = "../test/TwoBody.dat";
+  string path = "./test/TwoBody.dat";
   vector<bodies_t> bodies;
   readASCII(bodies, path);
 
