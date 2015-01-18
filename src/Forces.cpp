@@ -30,38 +30,35 @@ vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
 }
 
 int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, double spaceVolume, double eps2)
-{
-  int N = bodies.size();
-  
-  double L = 0.5 * pow(spaceVolume, 1.0/3.0);
-  domain_t masterDomain;
-
-  masterDomain.x0 = -L;
-  masterDomain.x1 = L;
-
-  masterDomain.y0 = -L;
-  masterDomain.y1 = L;
-  
-  masterDomain.z0 = -L;
-  masterDomain.z1 = L;
- 
+{ 
   // check if all particles are in the domain.  This should be
   // an O(n) operation. Throw exception if a particle has left 
   // the simulation.
 
 
-
   // Compute forces. Since each operation has the same cost, there
   // is no need to consider loading factors between the threads.  
-
-  MPI::Init();
   
   int nthreads, rank;
   
   MPI_Comm_size(MPI_COMM_WORLD, &nthreads);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  int N = bodies.size();
+  
+  double L = 0.5 * pow(spaceVolume, 1.0/3.0);
+  domain_t masterDomain;
+  
+  masterDomain.x0 = -L;
+  masterDomain.x1 = L;
+  
+  masterDomain.y0 = -L;
+  masterDomain.y1 = L;
+  
+  masterDomain.z0 = -L;
+  masterDomain.z1 = L;
+    
 
-  if (nthreads > N && rank ==0)
+  if (nthreads > N && rank == 0)
     {
       printf("There are %d processes and only %d bodies: runtime error expected.\n", nthreads, N);
     }
@@ -77,12 +74,12 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
       n1 = N-1;
       n0 = 0;
     }
-
+  
   else
     {
       block = int((N - remainder)/nthreads);
-    
-
+      
+     
       // partitions the body list.
       if (rank == (nthreads - 1))
 	{
@@ -109,26 +106,39 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
     operations are performed, so MPI is not
     cost effective for fewer than two threads.
   */
-
+  
   MPI_Barrier(MPI_COMM_WORLD);
 
   for (int i = n0; i < (n1 + 1);i++)
     {
-      printf("Computing force on Body %d...\n", bodies[i].id);
+      //printf("Computing force on Body %d...\n", bodies[i].id);
+      vector<double> forceOnI(3,0.0);
       for (int j = 0; j < N; j++)
 	{
 	  if (i != j) // This is necessary to avoid computing "self" force.
 	    {
-	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], 0.0); // temporarily set eps2 = 0     
-	      printf("The force is [%10.5f, %10.5f, %10.5f]\n", force[0], force[1], force[2]);
-	    }
-	  
+	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], 0.0); // temporarily set eps2 = 0     	      
+	      //printf("The force is [%10.5f, %10.5f, %10.5f]\n", force[0], force[1], force[2]);
+	      forceOnI[0] += force[0];
+	      forceOnI[1] += force[1];
+	      forceOnI[2] += force[2];
+	    }	  
+	  forces[i] = forceOnI;
 	}
       
     }
 
-  MPI::Finalize();
+  MPI_Barrier(MPI_COMM_WORLD); // Synchronize before integration.
   
+
+  /*
+    We shouldn't do the integration here.  If a method requires multiple calls
+    to the force calculation, having segments of force operations is messy.  Integration
+    should be called separately, and this function should be called from the
+    integrator.  There are potential issues with not doing this, namely that we will
+    mix up the order of the forces.  Each MPI thread has its OWN copy of bodies[] and
+    will thus need to be synchronized.  
+  */  
 }
 
 
