@@ -7,3 +7,8 @@
   the ones defined in Body.cpp, but we need not use a binary format since
   the number of entries SHOULD be small.
 */
+
+int ReadContext(char * PATH, context_t &context)
+{
+  return 0;
+}
