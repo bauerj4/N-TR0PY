@@ -64,7 +64,7 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 
   if (nthreads == 1)
     {
-      n1 = N-1;
+      n1 = N;
       n0 = 0;
     }
 
@@ -77,13 +77,13 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
       if (rank == (nthreads - 1))
         {
           n0 = block * rank;
-          n1 = remainder + block*(rank);
+          n1 = n0 + remainder + block*(rank);
         }
 
       else
         {
           n0 = block * rank;
-          n1 = n0 + block * (rank);
+          n1 = n0 + block * (rank + 1);
         }
 
     }
@@ -157,7 +157,7 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 
       MPI_Status send_status;
       MPI_Request send_request;
-      printf("Thead %d preparing to send...\n",rank);
+      printf("Thead %d preparing to send %d elements...\n",rank, (n1-n0));
       MPI_Isend(q1list,(n1-n0),MPI_DOUBLE,0,1 + 6 * rank,MPI_COMM_WORLD,&send_request);
       MPI_Isend(q2list,(n1-n0),MPI_DOUBLE,0,2 + 6 * rank,MPI_COMM_WORLD,&send_request);
       MPI_Isend(q3list,(n1-n0),MPI_DOUBLE,0,3 + 6 * rank,MPI_COMM_WORLD,&send_request);      
@@ -171,6 +171,15 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
       printf("Data sent by thread %d.\n",rank);
       
       // Synchronize before serial operations
+
+      double  Q1[N];
+      double  Q2[N];
+      double  Q3[N];
+
+      double  U1[N];
+      double  U2[N];
+      double  U3[N];
+
       MPI_Barrier(MPI_COMM_WORLD);
 
       if (rank == 0)
@@ -179,13 +188,13 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 	  int expected;
 
 	  // Master list of positions and velocities
-	  double  Q1[N];
-	  double  Q2[N];
-	  double  Q3[N];
+	  //double  Q1[N];
+	  //double  Q2[N];
+	  //double  Q3[N];
 	  
-	  double  U1[N];
-	  double  U2[N];
-	  double  U3[N];
+	  ////double  U1[N];
+	  //double  U2[N];
+	  //double  U3[N];
 
 	  // required since block was defined out of scope
 	  int block = int((N - remainder)/nthreads);
@@ -196,7 +205,7 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 	      if(i != (nthreads - 1))
 		{
 		  expected = block;
-		  printf("Expecting %d elements for thread %d.\n", block,rank);
+		  printf("Expecting %d elements for thread %d.\n", expected,rank);
 		}
 	      else
 		{
@@ -218,12 +227,12 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 	      
 	      MPI_Status recv_status;
 	      MPI_Request recv_request;
-	      MPI_Irecv(&tempQ1, expected, MPI_DOUBLE, i, 1 + 6 * i, MPI_COMM_WORLD, &recv_request);
-              MPI_Irecv(&tempQ2, expected, MPI_DOUBLE, i, 2 + 6 * i, MPI_COMM_WORLD, &recv_request);
-              MPI_Irecv(&tempQ3, expected, MPI_DOUBLE, i, 3 + 6 * i, MPI_COMM_WORLD, &recv_request);
-              MPI_Irecv(&tempU1, expected, MPI_DOUBLE, i, 4 + 6 * i, MPI_COMM_WORLD, &recv_request);
-              MPI_Irecv(&tempU2, expected, MPI_DOUBLE, i, 5 + 6 * i, MPI_COMM_WORLD, &recv_request);
-              MPI_Irecv(&tempU3, expected, MPI_DOUBLE, i, 6 + 6 * i, MPI_COMM_WORLD, &recv_request);
+	      MPI_Irecv(tempQ1, expected, MPI_DOUBLE, i, 1 + 6 * i, MPI_COMM_WORLD, &recv_request);
+              MPI_Irecv(tempQ2, expected, MPI_DOUBLE, i, 2 + 6 * i, MPI_COMM_WORLD, &recv_request);
+              MPI_Irecv(tempQ3, expected, MPI_DOUBLE, i, 3 + 6 * i, MPI_COMM_WORLD, &recv_request);
+              MPI_Irecv(tempU1, expected, MPI_DOUBLE, i, 4 + 6 * i, MPI_COMM_WORLD, &recv_request);
+              MPI_Irecv(tempU2, expected, MPI_DOUBLE, i, 5 + 6 * i, MPI_COMM_WORLD, &recv_request);
+              MPI_Irecv(tempU3, expected, MPI_DOUBLE, i, 6 + 6 * i, MPI_COMM_WORLD, &recv_request);
 
 
 
@@ -236,7 +245,7 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 	      //double *U_buff = (double *)malloc(3 * expected * sizeof(double));
 	      //double *Q_buff = (double *)malloc(3 * expected * sizeof(double));
 	      
-	      for (int j = block * rank; j < expected; j++)
+	      for (int j = block * rank; j < block*rank + expected; j++)
 		{
 		  Q1[j] = tempQ1[j];
 		  Q2[j] = tempQ2[j];
@@ -264,16 +273,49 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 
 	  printf("Preparing to broadcast %d value arrays from %d sized arrays...\n",N, (int)sizeof(Q1)/(int)sizeof(double));
 	  //printf("The position of body 2 is: [%10.10f, %10.10f, %10.10f]\n",Q1[1],Q2[1],Q3[1]);
-	  //MPI_Bcast(Q1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-          //MPI_Bcast(Q2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-          //MPI_Bcast(Q3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  printf("Q1 = [%10.10f, %10.10f]\n",Q1[0],Q1[1]);
+          printf("Q2 = [%10.10f, %10.10f]\n",Q2[0],Q2[1]);
+          printf("Q3 = [%10.10f, %10.10f]\n",Q3[0],Q3[1]);
+          printf("U1 = [%10.10f, %10.10f]\n",U1[0],U1[1]);
+          printf("U2 = [%10.10f, %10.10f]\n",U2[0],U2[1]);
+          printf("U3 = [%10.10f, %10.10f]\n",U3[0],U3[1]);
 
-          //MPI_Bcast(U1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-          //MPI_Bcast(U2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-          //MPI_Bcast(U3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
+	  
+	  //MPI_Scatter(Q1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  //MPI_Scatter(Q2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  //MPI_Scatter(Q3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  
+	  //MPI_Scatter(U1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  //MPI_Scatter(U2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  //MPI_Scatter(U3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    
 	}
 
+      double updatedQ1[N];
+      double updatedQ2[N];
+      double updatedQ3[N];
+      
+      double updatedU1[N];
+      double updatedU2[N];
+      double updatedU3[N];
+      
+      MPI_Scatter(Q1, N, MPI_DOUBLE, updatedQ1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Scatter(Q2, N, MPI_DOUBLE, updatedQ2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Scatter(Q3, N, MPI_DOUBLE, updatedQ3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                                        
+      MPI_Scatter(U1, N, MPI_DOUBLE, updatedU1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Scatter(U2, N, MPI_DOUBLE, updatedU2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Scatter(U3, N, MPI_DOUBLE, updatedU3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+      printf("Received Q1 = [%10.10f, %10.10f]\n",updatedQ1[0],updatedQ1[1]);
+      printf("Received Q2 = [%10.10f, %10.10f]\n",updatedQ2[0],updatedQ2[1]);
+      printf("Received Q3 = [%10.10f, %10.10f]\n",updatedQ3[0],updatedQ3[1]);
+      printf("Received U1 = [%10.10f, %10.10f]\n",updatedU1[0],updatedU1[1]);
+      printf("Received U2 = [%10.10f, %10.10f]\n",updatedU2[0],updatedU2[1]);
+      printf("Received U3 = [%10.10f, %10.10f]\n",updatedU3[0],updatedU3[1]);
+
+
+                                                                                    
       // Synchronize
       //MPI_Barrier(MPI_COMM_WORLD);
 
