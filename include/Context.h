@@ -14,3 +14,5 @@ struct context_t
   double init3Volume;
   string cosmology; // In the future, non-flat geometries and non-Lambda CDM will be supported.
 };
+
+int ReadContext(char * PATH, context_t &context);

@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
   //vector<vector<double> > forces;
 
   double evolveTime = 1.0; // Gy
-  int NStep = 10000;
+  int NStep = 1000;
   
   EulerMethod(bodies, evolveTime, NStep, NBODY_CONTEXT); // This function should take an integration scheme specifier
   // maybe just pass &NBODY_CONTEXT?
