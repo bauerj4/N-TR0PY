@@ -221,13 +221,13 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	}
       MPI_Barrier(MPI_COMM_WORLD);
 
-      //MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
+      MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
       for (int m = 0; m < N; m++)
 	{
 	  bodies[m] = bodiesArr[m];
 	}
 
-      MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
+      //MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
 
       currentTime += h;
       //      printf("Current time is %10.10f.\n",currentTime);

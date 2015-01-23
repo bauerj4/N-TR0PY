@@ -128,7 +128,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
 	  if (i != j) // This is necessary to avoid computing "self" force.
 	    {
 	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], 0.0); // temporarily set eps2 = 0     	      
-	      //printf("The force is [%10.5f, %10.5f, %10.5f]\n", force[0], force[1], force[2]);
+	      //printf("The force on %d is [%10.5f, %10.5f, %10.5f]\n",i, force[0], force[1], force[2]);
 	      forceOnI[0] += force[0];
 	      forceOnI[1] += force[1];
 	      forceOnI[2] += force[2];
