@@ -41,6 +41,22 @@ struct bodies_t
   IFrIT's binary format in the future.
 */
 
+MPI_Datatype createMPIBody()
+{
+
+  MPI_Datatype  MPI_BODY;
+  int  counts[] = {1,1,1,1,1,1,1,1,1}; //{sizeof(int),sizeof(int),sizeof(double),sizeof(double),sizeof(double),sizeof(double),sizeof(double),sizeof(double)};
+  long int  offsets[] = {0,4,8,16,24,32,40,48,56};
+  MPI_Datatype types[] = {MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
+  
+  MPI_Type_struct(9, counts, offsets,types, &MPI_BODY);
+  MPI_Type_commit(&MPI_BODY);
+  int size;
+  MPI_Type_size(MPI_BODY,&size);
+  printf("MPI_BODY IS DECLARED WITH SIZE: %d\n",(int) size);
+  return MPI_BODY;
+}
+
 int delimitString(vector<string> &tokens, string line, string delimiter)
 {
   int newpos = 0;

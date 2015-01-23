@@ -22,7 +22,7 @@ vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
   double dz = p.q3 - q.q3;
 
   double dr2 = pow(dx,2) + pow(dy,2) + pow(dz,2);
-  printf("The distance is %10.5f.\n", pow(dr2,0.5));
+  //printf("The distance is %10.5f.\n", pow(dr2,0.5));
 
   double forceMag =  G * (p.mass * q.mass) / (dr2 + eps2);
   double forceQuotient = -forceMag/pow(dr2,1.0/2.0);
@@ -75,7 +75,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
 
   if (nthreads == 1)
     {
-      n1 = N-1;
+      n1 = N ;
       n0 = 0;
     }
   
@@ -88,19 +88,25 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
       if (rank == (nthreads - 1))
 	{
 	  n0 = block * rank;
-	  n1 = remainder + block*(rank);
+	  n1 = remainder + block*(rank+1);
 	}
       
       else 
 	{
 	  n0 = block * rank;
-	  n1 = n0 + block * (rank);
+	  n1 = block * (rank + 1);
 	}
       
     }
 
-  
-  // printf("My rank is %d, and my search segment is [%d,%d]\n",rank,n0,n1);
+  /*
+  printf("My rank is %d, and my search segment is [%d,%d]\n",rank,n0,n1);
+  for (int i = n0; i < n1; i++)
+    {
+      printf("The particles %d have includes data:\n",n0);
+      printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
+      printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
+      }*/
   /*
     We now directly compute the forces.  
     It should be noted that this is a 
@@ -110,10 +116,10 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
     operations are performed, so MPI is not
     cost effective for fewer than two threads.
   */
-  
+
   MPI_Barrier(MPI_COMM_WORLD);
 
-  for (int i = n0; i < (n1 + 1);i++)
+  for (int i = n0; i < (n1);i++)
     {
       //printf("Computing force on Body %d...\n", bodies[i].id);
       vector<double> forceOnI(3,0.0);

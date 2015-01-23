@@ -34,13 +34,16 @@
 using namespace std;
 
 
+// NOTE: PERHAPS ONLY MAKE FORCE CALCUALTION PARALLEL?
+
+
 /*
   The Euler Method is included for instructional purposes and for calculating 
   ICs only.  It is horrible in every possible way.  It is low order (1) and 
   is laughably unstable.  
 */
 
-int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, context_t &NBODY_CONTEXT)
+vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int numberOfSteps, context_t &NBODY_CONTEXT)
 {
   int nthreads, rank;
 
@@ -83,13 +86,13 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
       else
         {
           n0 = block * rank;
-          n1 = n0 + block * (rank);
+          n1 = n0 + block * (rank + 1);
         }
 
     }
 
 
-
+  //printf("I am thread %d and my (n0, n1) is (%d, %d)!\n", rank, n0, n1);
   /*
     In principle, this process could be easily parallelized.  
     It is, however, an O(N) process and for debugging purposes,
@@ -99,10 +102,31 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
   
   double currentTime = 0;
 
-  
+  MPI_Datatype MPI_BODY = createMPIBody();
+
+  //printf("MPI DATATYPE DEFINED.\n");
+
+  //printf("MPI AND C SIZES ARE %d and %d.\n",(int)sizeof(MPI_BODY), (int)sizeof(bodies_t));
+
   while (currentTime < evolveTime)
     {
       MPI_Barrier(MPI_COMM_WORLD);
+      bodies_t  bodiesArr[N];
+      for (int i=0; i<N; i++)
+	{
+	  bodies_t body;
+	  body.id = -1;
+	  body.type = -1;
+	  body.mass = -1.0;
+	  body.u1 = -1.0;
+	  body.u2 = -1.0;
+	  body.u3 = -1.0;
+	  body.q1 = -1.0;
+	  body.q2 = -1.0;
+	  body.q2 = -1.0;
+	  bodiesArr[i] = body;
+	}
+
       N2BruteForce(bodies, forces, NBODY_CONTEXT.init3Volume, NBODY_CONTEXT.eps2);
       for (int i = n0; i<n1; i++)
 	{
@@ -118,315 +142,107 @@ int EulerMethod(vector<bodies_t> &bodies, double evolveTime, int numberOfSteps, 
 	  bodies[i].q2 += 1.022 * bodies[i].u2 * h;
 	  bodies[i].q3 += 1.022 * bodies[i].u3 * h;
 
+	  printf("The calculated data is:\n");
+	  printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
+	  printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
+
+	  bodiesArr[i] = bodies[i];
+
 	  //printf("[%10.10f, %10.10f, %10.10f]\n", bodies[i].q1, bodies[i].q2, bodies[i].q3);
 	}
 
-      currentTime += h;
-      printf("Current time is %10.10f.\n",currentTime);
-      MPI_Barrier(MPI_COMM_WORLD);
-      printf("Thread %d passed barrier 1.\n", rank);
-      // Now we must broadcast and synchronize the list
-      // as separate components and reconstruct them in the master
-      // thread.   Then we must broadcast them back to each thread.
-      // This is potentially costly, but again is an O(N) calculation
-      // which should scale nicely with the number of threads.  
-
-      // Convert changed components to C arrays whose transport is supported
-      // by MPI.  The order will be preserved because the master root will 
-      // take each thread in order.  Because of how the load was balanced,
-      // we need not worry about particle IDs when sorting this way.  
+      printf("FORCES CALCULATED ON THREAD %d.\n",rank);
       
-      double q1list[n1-n0];
-      double q2list[n1-n0];
-      double q3list[n1-n0];
-      
-      double u1list[n1-n0];
-      double u2list[n1-n0];
-      double u3list[n1-n0];
 
-      for (int i = 0; i < (n1-n0); i++)
-	{
-	  q1list[i] = bodies[i].q1;
-          q2list[i] = bodies[i].q2;
-          q3list[i] = bodies[i].q3;
+      //bodies_t * bodiesArr[n1 - n0]
+      // MPI_Datatype MPI_BODY = createMPIBody();
 
-          u1list[i] = bodies[i].u1;
-          u2list[i] = bodies[i].u2;
-          u3list[i] = bodies[i].u3;
-	}
+      //printf("MPI DATATYPE DEFINED.\n");
 
-      MPI_Status send_status;
-      MPI_Request send_request;
-      printf("Thead %d preparing to send %d elements...\n",rank, (n1-n0));
-      
       if (rank != 0)
 	{
-	  MPI_Send(q1list, (n1-n0), MPI_DOUBLE, 0, 1 + 6 * rank, MPI_COMM_WORLD);
-          MPI_Send(q2list, (n1-n0), MPI_DOUBLE, 0, 2 + 6 * rank, MPI_COMM_WORLD);
-          MPI_Send(q3list, (n1-n0), MPI_DOUBLE, 0, 3 + 6 * rank, MPI_COMM_WORLD);
-          MPI_Send(u1list, (n1-n0), MPI_DOUBLE, 0, 4 + 6 * rank, MPI_COMM_WORLD);
-          MPI_Send(u2list, (n1-n0), MPI_DOUBLE, 0, 5 + 6 * rank, MPI_COMM_WORLD);
-          MPI_Send(u3list, (n1-n0), MPI_DOUBLE, 0, 6 + 6 * rank, MPI_COMM_WORLD);
-
+	  //printf("Preparing to send data of size %d from thread %d...\n",N,rank);
+	  MPI_Send(&bodiesArr, N, MPI_BODY, 0, rank, MPI_COMM_WORLD);
+	  //printf("Sent data from thread %d.\n",rank);
 	}
-
-      //MPI_Isend(q1list,(n1-n0),MPI_DOUBLE,0,1 + 6 * rank,MPI_COMM_WORLD,&send_request);
-      //MPI_Isend(q2list,(n1-n0),MPI_DOUBLE,0,2 + 6 * rank,MPI_COMM_WORLD,&send_request);
-      //MPI_Isend(q3list,(n1-n0),MPI_DOUBLE,0,3 + 6 * rank,MPI_COMM_WORLD,&send_request);      
-      //MPI_Isend(u1list,(n1-n0),MPI_DOUBLE,0,4 + 6 * rank,MPI_COMM_WORLD,&send_request);
-      //MPI_Isend(u2list,(n1-n0),MPI_DOUBLE,0,5 + 6 * rank,MPI_COMM_WORLD,&send_request);
-      //MPI_Isend(u3list,(n1-n0),MPI_DOUBLE,0,6 + 6 * rank,MPI_COMM_WORLD,&send_request);
-	
-      //MPI_Wait(&send_request, &send_status);
-      //MPI_Barrier(MPI_COMM_WORLD);
-      
-      printf("Data sent by thread %d.\n",rank);
-      
-      // Synchronize before serial operations
-
-      double  Q1[N];
-      double  Q2[N];
-      double  Q3[N];
-
-      double  U1[N];
-      double  U2[N];
-      double  U3[N];
-
-      MPI_Barrier(MPI_COMM_WORLD);
 
       if (rank == 0)
 	{
-	  int block = int((N - remainder)/nthreads);
-
-	  for (int k = 0; k < block; k++)
+	  int Recvn0, Recvn1, expected;
+	  //printf("PERFORMING SERIAL OPERATIONS.\n");
+     
+	  for(int j = 1; j<nthreads; j++)
 	    {
-	      Q1[k] = q1list[k];
-	      Q2[k] = q2list[k];
-	      Q3[k] = q3list[k];
-	      U1[k] = u1list[k];
-	      U2[k] = u2list[k];
-	      U3[k] = u3list[k];
-	    }
-	
-	  printf("Performing serial operations.\n");
-	  int expected;
-
-	  // Master list of positions and velocities
-	  //double  Q1[N];
-	  //double  Q2[N];
-	  //double  Q3[N];
-	  
-	  ////double  U1[N];
-	  //double  U2[N];
-	  //double  U3[N];
-
-	  // required since block was defined out of scope
-	  //int block = int((N - remainder)/nthreads);
-	  int flag;
-	  MPI_Status recv_status;
-	  MPI_Request recv_request;
-
-	  /*
-	  for (int k = 0; k<block; k++)
-	    {
-	      Q1[k] = temp[k];
-	      
-	    }
-	  */
-	  for (int i = 1; i<nthreads; i++)
-	    {
-	      
-	      if(i == (nthreads - 1))
+	      if (rank == (nthreads - 1))
 		{
-		  n0 = block * i;
-		  n1 = remainder + n0 + block;
-		  expected = n1 - n0;
+		  Recvn0 = block * j;
+		  Recvn1 = Recvn0 + remainder + block*j;
 		}
+
 	      else
 		{
-		  n0 = block * i;
-		  n1 = n0 + (block);
-		  expected = n1 - n0;
-                  printf("Expecting %d elements for thread %d.\n", expected,i);
+		  Recvn0 = block * rank;
+		  Recvn1 = Recvn0 + block * (j );
 		}
 
-	      //printf("Memory assigned.\n");
-
-	      double tempQ1[expected];
-	      double tempQ2[expected];
-	      double tempQ3[expected];
-	      //double * Q_buff[3 * expected];
-
-	      double tempU1[expected];
-	      double tempU2[expected];
-	      double tempU3[expected];
-	      //double * U_buff[3 * expected];
+	      expected = Recvn1 - Recvn0;
+	      bodies_t tempBody[N];
+	      MPI_Status status;
+	      MPI_Request  request;
+	      int  flag;
 	      
-	      //MPI_Status recv_status;
-	      //MPI_Request recv_request;
-
+	      //printf("Preparing to receive data of size %d from thread %d...\n",N,j);
+	      int ret = MPI_Recv(&tempBody, N, MPI_BODY, j,j,MPI_COMM_WORLD,&status);
+	      printf("Received value staus is %d\n",ret);
+	      //printf("Data received.");
 	      
-	      MPI_Recv(tempQ1, expected, MPI_DOUBLE, i, 1 + 6 * i, MPI_COMM_WORLD, &recv_status);
-	      MPI_Recv(tempQ2, expected, MPI_DOUBLE, i, 2 + 6 * i, MPI_COMM_WORLD, &recv_status);
-	      MPI_Recv(tempQ3, expected, MPI_DOUBLE, i, 3 + 6 * i, MPI_COMM_WORLD, &recv_status);
-	      
-	      MPI_Recv(tempU1, expected, MPI_DOUBLE, i, 4 + 6 * i, MPI_COMM_WORLD, &recv_status);
-	      MPI_Recv(tempU2, expected, MPI_DOUBLE, i, 5 + 6 * i, MPI_COMM_WORLD, &recv_status);
-	      MPI_Recv(tempU3, expected, MPI_DOUBLE, i, 6 + 6 * i, MPI_COMM_WORLD, &recv_status);
-	      
-	      /*
-		MPI_Irecv(tempQ1, expected, MPI_DOUBLE, i, 1 + 6 * i, MPI_COMM_WORLD, &recv_request);
-		MPI_Irecv(tempQ2, expected, MPI_DOUBLE, i, 2 + 6 * i, MPI_COMM_WORLD, &recv_request);
-		MPI_Irecv(tempQ3, expected, MPI_DOUBLE, i, 3 + 6 * i, MPI_COMM_WORLD, &recv_request);
-		MPI_Irecv(tempU1, expected, MPI_DOUBLE, i, 4 + 6 * i, MPI_COMM_WORLD, &recv_request);
-		MPI_Irecv(tempU2, expected, MPI_DOUBLE, i, 5 + 6 * i, MPI_COMM_WORLD, &recv_request);
-		MPI_Irecv(tempU3, expected, MPI_DOUBLE, i, 6 + 6 * i, MPI_COMM_WORLD, &recv_request);*/
-	      
-	      /*
-		else 
+	      for(int k = n0; k < expected; k++ )
 		{
-		for (int k = 0; i < block; i++)
-		{
-		Q1[k] = q1list[k];
-		Q2[k] = q2list[k];
-		Q3[k] = q3list[k];
-		U1[k] = u1list[k];
-		U2[k] = u2list[k];
-		U3[k] = u3list[k];
-		}*/
-	      //printf("List Q1 = [%10.10f, %10.10f]\n",tempQ1[0],tempQ1[1]);
-	      //printf("List Q2 = [%10.10f, %10.10f]\n",tempQ2[0],tempQ2[1]);
-	      //printf("List Q3 = [%10.10f, %10.10f]\n",tempQ3[0],tempQ3[1]);
-	      //printf("List U1 = [%10.10f, %10.10f]\n",tempU1[0],tempU1[1]);
-	      //printf("List U2 = [%10.10f, %10.10f]\n",tempU2[0],tempU2[1]);
-	      //printf("List U3 = [%10.10f, %10.10f]\n",tempU3[0],tempU3[1]);
-	      
-	      
-	    
-
-	      printf("Q1 = [%10.10f, %10.10f]\n",Q1[0],Q1[1]);
-	      printf("Q2 = [%10.10f, %10.10f]\n",Q2[0],Q2[1]);
-	      printf("Q3 = [%10.10f, %10.10f]\n",Q3[0],Q3[1]);
-	      printf("U1 = [%10.10f, %10.10f]\n",U1[0],U1[1]);
-	      printf("U2 = [%10.10f, %10.10f]\n",U2[0],U2[1]);
-	      printf("U3 = [%10.10f, %10.10f]\n",U3[0],U3[1]);
-	      
-	      
-	      
-	      //printf("The size of the temporary arrays is %d and their elements have size %d.\n", );
-	      
-	      //	      MPI_Wait(&send_request, &send_status);
-	      //	      MPI_Wait(&recv_request, &recv_status);
-
-
-	      //double *U_buff = (double *)malloc(3 * expected * sizeof(double));
-	      //double *Q_buff = (double *)malloc(3 * expected * sizeof(double));
-	      printf("The block size is %d\n",block);
-	     
-	      for (int j = block * i; j < (block)*i + expected; j++)
-		{
-		  Q1[j] = tempQ1[j];
-		  Q2[j] = tempQ2[j];
-		  Q3[j] = tempQ3[j];
-		  
-		  U1[j] = tempU1[j];
-		  U2[j] = tempU2[j];
-		  U3[j] = tempU3[j];
-		  printf("(i,j) = (%d,%d)\n",i,j);
-		  
-		  printf("Temp body %d has position [%10.10f,%10.10f, %10.10f], velocity [%10.10f,%10.10f,%10.10f]\n",j, tempQ1[j], tempQ2[j], tempQ3[j], tempU1[j], tempU2[j], tempU3[j]);
+		  //printf("K = %d!\n",k);
+		  printf("TempBody %d has RECEIVED values:\n",k);
+		  printf("r = [%5.10f, %5.10f, %5.10f]\n", tempBody[k].q1,tempBody[k].q2,tempBody[k].q3);
+		  printf("u = [%5.10f, %5.10f, %5.10f]\n", tempBody[k].u1,tempBody[k].u2,tempBody[k].u3);
+		  bodiesArr[k] = tempBody[k];
 		}
 
+	      //MPI_Bcast(bodies,)
+	      //MPI_Test(request,flag,status);
 	    }
-	
-	      
-  
-	      
-		  // Should the memory for the temporary variables be freed?
-		  //allocator::deallocate(*status,sizeof(status));
-		  //allocator::deallocate(*temp,sizeof(temp));
-      
-	      //int flag;
-	      //MPI_Test(&send_request,&flag, &send_status);
-	      //MPI_Test(&recv_request,&flag, &recv_status);
-      
-    }
-	  //MPI_Test(&send_request,&flag, &send_status);
-	  //MPI_Test(&recv_request,&flag, &recv_status);
+	  //for (int m = 0; m < N; m++)
+	  // {
+	  //  bodies[m] = bodiesArr[m];
+	  //}
 
-	  // Broadcast back to other threads
-
-      printf("Preparing to broadcast %d value arrays from %d sized arrays...\n",N, (int)sizeof(Q1)/(int)sizeof(double));
-      //printf("The position of body 2 is: [%10.10f, %10.10f, %10.10f]\n",Q1[1],Q2[1],Q3[1]);
-      printf("Q1 = [%10.10f, %10.10f]\n",Q1[0],Q1[1]);
-      printf("Q2 = [%10.10f, %10.10f]\n",Q2[0],Q2[1]);
-      printf("Q3 = [%10.10f, %10.10f]\n",Q3[0],Q3[1]);
-      printf("U1 = [%10.10f, %10.10f]\n",U1[0],U1[1]);
-      printf("U2 = [%10.10f, %10.10f]\n",U2[0],U2[1]);
-      printf("U3 = [%10.10f, %10.10f]\n",U3[0],U3[1]);
-      
-      
-      //MPI_Scatter(Q1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      //MPI_Scatter(Q2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      //MPI_Scatter(Q3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      
-      //MPI_Scatter(U1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      //MPI_Scatter(U2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      //MPI_Scatter(U3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      
-
-
-      MPI_Bcast(Q1,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(Q2,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(Q3,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(U1,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(U2,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(U3,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-
-      /*
-	double updatedQ1[N];
-	double updatedQ2[N];
-	double updatedQ3[N];
-	
-	double updatedU1[N];
-	double updatedU2[N];
-	double updatedU3[N];
-	
-	MPI_Scatter(Q1, N, MPI_DOUBLE, updatedQ1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Scatter(Q2, N, MPI_DOUBLE, updatedQ2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Scatter(Q3, N, MPI_DOUBLE, updatedQ3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	
-	MPI_Scatter(U1, N, MPI_DOUBLE, updatedU1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Scatter(U2, N, MPI_DOUBLE, updatedU2, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Scatter(U3, N, MPI_DOUBLE, updatedU3, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      */
-      printf("Received Q1 = [%10.10f, %10.10f]\n",Q1[0],Q1[1]);
-      printf("Received Q2 = [%10.10f, %10.10f]\n",Q2[0],Q2[1]);
-      printf("Received Q3 = [%10.10f, %10.10f]\n",Q3[0],Q3[1]);
-      printf("Received U1 = [%10.10f, %10.10f]\n",U1[0],U1[1]);
-      printf("Received U2 = [%10.10f, %10.10f]\n",U2[0],U2[1]);
-      printf("Received U3 = [%10.10f, %10.10f]\n",U3[0],U3[1]);
-      
-      for (int j = 0; j<N; j++)
-	{
-	  bodies[j].q1 = Q1[j];
-	  bodies[j].q2 = Q2[j];
-	  bodies[j].q3 = Q3[j];
-	  
-	  bodies[j].u1 = U1[j];
-	  bodies[j].u2 = U2[j];
-	  bodies[j].u3 = U3[j];
-	  
+	  // MPI_Test(status,request);
+	  //printf("Beginning serial code.\n");
 	}
+
+      MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
+      for (int m = 0; m < N; m++)
+	{
+	  bodies[m] = bodiesArr[m];
+	}
+
+
+      currentTime += h;
+      printf("Current time is %10.10f.\n",currentTime);
+
+      if(rank == 0)
+	{
+	  for (int i = 0; i < N; i++)
+	    {
+	      printf("The data for body %d is:\n",i);
+	      printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
+	      printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
+	    }
+	}
+      MPI_Barrier(MPI_COMM_WORLD);
       
-      // Synchronize
-      //MPI_Barrier(MPI_COMM_WORLD);
-  
-      
-      
-      
-    }  
-  return 0;
+
+      //MPI_Scatter(Q1, N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+     //MPI_Bcast(Q1,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    }
+  return bodies;
     
 }
