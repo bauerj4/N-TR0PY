@@ -4,7 +4,7 @@
 #include "mpi.h"
 #include <vector>
 #include <cstdlib>
-
+#include <cmath>
 /*
   We accumulate here a list of integration schemes.  These solve 
   the system of ODEs:
@@ -142,16 +142,16 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	  bodies[i].q2 += 1.022 * bodies[i].u2 * h;
 	  bodies[i].q3 += 1.022 * bodies[i].u3 * h;
 
-	  printf("The calculated data is:\n");
-	  printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
-	  printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
+	  //printf("The calculated data is:\n");
+	  //printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
+	  //printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
 
 	  bodiesArr[i] = bodies[i];
 
 	  //printf("[%10.10f, %10.10f, %10.10f]\n", bodies[i].q1, bodies[i].q2, bodies[i].q3);
 	}
 
-      printf("FORCES CALCULATED ON THREAD %d.\n",rank);
+      // printf("FORCES CALCULATED ON THREAD %d.\n",rank);
       
 
       //bodies_t * bodiesArr[n1 - n0]
@@ -176,13 +176,16 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	      if (rank == (nthreads - 1))
 		{
 		  Recvn0 = block * j;
-		  Recvn1 = Recvn0 + remainder + block*j;
+		  Recvn1 =  remainder + (block + 1)*j;
+		  // printf("[Recvn1, Recvn2] = [%d,%d]",Recvn0,Recvn1);
 		}
 
 	      else
 		{
-		  Recvn0 = block * rank;
+		  Recvn0 = block * j;
 		  Recvn1 = Recvn0 + block * (j );
+		  // printf("[Recvn1, Recvn2] = [%d,%d]", Recvn0,Recvn1);
+
 		}
 
 	      expected = Recvn1 - Recvn0;
@@ -193,15 +196,15 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	      
 	      //printf("Preparing to receive data of size %d from thread %d...\n",N,j);
 	      int ret = MPI_Recv(&tempBody, N, MPI_BODY, j,j,MPI_COMM_WORLD,&status);
-	      printf("Received value staus is %d\n",ret);
+	      //printf("Received value staus is %d\n",ret);
 	      //printf("Data received.");
 	      
-	      for(int k = n0; k < expected; k++ )
+	      for(int k = Recvn0; k < Recvn1; k++ )
 		{
 		  //printf("K = %d!\n",k);
-		  printf("TempBody %d has RECEIVED values:\n",k);
-		  printf("r = [%5.10f, %5.10f, %5.10f]\n", tempBody[k].q1,tempBody[k].q2,tempBody[k].q3);
-		  printf("u = [%5.10f, %5.10f, %5.10f]\n", tempBody[k].u1,tempBody[k].u2,tempBody[k].u3);
+		  //printf("TempBody %d has RECEIVED values:\n",k);
+		  //printf("r = [%5.10f, %5.10f, %5.10f]\n", tempBody[k].q1,tempBody[k].q2,tempBody[k].q3);
+		  //printf("u = [%5.10f, %5.10f, %5.10f]\n", tempBody[k].u1,tempBody[k].u2,tempBody[k].u3);
 		  bodiesArr[k] = tempBody[k];
 		}
 
@@ -216,26 +219,32 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	  // MPI_Test(status,request);
 	  //printf("Beginning serial code.\n");
 	}
+      MPI_Barrier(MPI_COMM_WORLD);
 
-      MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
+      //MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
       for (int m = 0; m < N; m++)
 	{
 	  bodies[m] = bodiesArr[m];
 	}
 
+      MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
 
       currentTime += h;
-      printf("Current time is %10.10f.\n",currentTime);
+      //      printf("Current time is %10.10f.\n",currentTime);
 
       if(rank == 0)
 	{
 	  for (int i = 0; i < N; i++)
 	    {
-	      printf("The data for body %d is:\n",i);
-	      printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
-	      printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
+	      //printf("Current time is %10.10f.\n",currentTime);
+	      //printf("The data for body %d is:\n",i);
+	      //printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
+	      //printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
+	      printf("%5.10f\n", pow(pow(bodies[i].q1,2) + pow(bodies[i].q2, 2) + pow(bodies[i].q3,2),0.5));
 	    }
 	}
+
+      
       MPI_Barrier(MPI_COMM_WORLD);
       
 

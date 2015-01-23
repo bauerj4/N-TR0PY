@@ -56,8 +56,8 @@ int main(int argc, char *argv[])
   */
 
 
-  double evolveTime = 0.25; // Gy
-  int NStep = 5;
+  double evolveTime = 1.0; // Gy
+  int NStep = 500;
   
   bodies = EulerMethod(bodies, evolveTime, NStep, NBODY_CONTEXT); // This function should take an integration scheme specifier
   // maybe just pass &NBODY_CONTEXT?
