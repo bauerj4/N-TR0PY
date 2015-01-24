@@ -127,7 +127,7 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	  bodiesArr[i] = body;
 	}
 
-      N2BruteForce(bodies, forces, NBODY_CONTEXT.init3Volume, NBODY_CONTEXT.eps2);
+      N2BruteForce(bodies, forces, NBODY_CONTEXT.INIT3VOLUME, NBODY_CONTEXT.EPS2);
       for (int i = n0; i<n1; i++)
 	{
 	  bodies[i].u1 += 0.9785 * forces[i][0] * h; //Convert u to km/s

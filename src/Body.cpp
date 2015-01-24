@@ -17,24 +17,6 @@ using namespace std;
 */
 
 
-
-/*
-struct bodies_t 
-{
-  int id = -1;
-  int type = -1;
-
-  double mass = 0;
-
-  double q1 = 0;
-  double q2 = 0;
-  double q3 = 0;
-  
-  double u1 = 0;
-  double u2 = 0;
-  double u3 = 0;
-  };*/
-
 /*
   For now, I intend to only support an ASCII output format,
   but I intend to implement a read method which will support 
@@ -45,7 +27,7 @@ MPI_Datatype createMPIBody()
 {
 
   MPI_Datatype  MPI_BODY;
-  int  counts[] = {1,1,1,1,1,1,1,1,1}; //{sizeof(int),sizeof(int),sizeof(double),sizeof(double),sizeof(double),sizeof(double),sizeof(double),sizeof(double)};
+  int  counts[] = {1,1,1,1,1,1,1,1,1}; 
   long int  offsets[] = {0,4,8,16,24,32,40,48,56};
   MPI_Datatype types[] = {MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
   
@@ -53,21 +35,18 @@ MPI_Datatype createMPIBody()
   MPI_Type_commit(&MPI_BODY);
   int size;
   MPI_Type_size(MPI_BODY,&size);
-  printf("MPI_BODY IS DECLARED WITH SIZE: %d\n",(int) size);
+  //printf("MPI_BODY IS DECLARED WITH SIZE: %d\n",(int) size);
   return MPI_BODY;
 }
 
 int delimitString(vector<string> &tokens, string line, string delimiter)
 {
+  int pos = 0;
   int newpos = 0;
   string token;
   while(1)
     {
       newpos = line.find(' ');
-      /*      if (newpos == string::npos)
-	{
-	  break;
-	  }*/
       token = line.substr(0,newpos);
       line.erase(0,newpos+1);
       //cout << "(pos, newpos) is (" + pos + ',' + newpos +')' << endl; 
@@ -79,12 +58,12 @@ int delimitString(vector<string> &tokens, string line, string delimiter)
 	  break;
 	}
     }
-  //cout << "Loop completed." << endl;
 }
 
 int readASCII(vector<bodies_t>& bodies,string path)
 {
   ifstream file;
+  cout << "THE PATH IS: " << path << '\n';
   file.open(path.c_str(), ifstream::in);
   string line;
   
@@ -139,7 +118,7 @@ int readASCII(vector<bodies_t>& bodies,string path)
   
   else
     {
-      cout << "N-TR0PY ERROR: Read file does not exist.\n";
+      cout << "N-TR0PY ERROR: Read file " + path + " does not exist.\n";
       return 1;
     }
 }
