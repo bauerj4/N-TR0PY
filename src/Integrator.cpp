@@ -43,18 +43,18 @@ using namespace std;
   is laughably unstable.  
 */
 
-vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int numberOfSteps, context_t &NBODY_CONTEXT)
+vector<bodies_t> EulerMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, int &snapshot_number)
 {
   int nthreads, rank;
 
   MPI_Comm_size(MPI_COMM_WORLD, &nthreads);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-
+  //writeSnapshot(bodies, NBODY_CONTEXT, 3);
   int N = bodies.size();
   vector<double> emptyForce(3,0.0);
 
-  double h = evolveTime/(double)numberOfSteps;
+  double h = NBODY_CONTEXT.SIMULATION_TIME / NBODY_CONTEXT.NSTEP;
 
   vector<vector<double> > forces(N,emptyForce);
 
@@ -101,6 +101,7 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
   */
   
   double currentTime = 0;
+  int iteration = 0;
 
   MPI_Datatype MPI_BODY = createMPIBody();
 
@@ -108,7 +109,7 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 
   //printf("MPI AND C SIZES ARE %d and %d.\n",(int)sizeof(MPI_BODY), (int)sizeof(bodies_t));
 
-  while (currentTime < evolveTime)
+  while (currentTime < NBODY_CONTEXT.SIMULATION_TIME)
     {
       MPI_Barrier(MPI_COMM_WORLD);
       bodies_t  bodiesArr[N];
@@ -127,7 +128,10 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	  bodiesArr[i] = body;
 	}
 
-      N2BruteForce(bodies, forces, NBODY_CONTEXT.INIT3VOLUME, NBODY_CONTEXT.EPS2);
+      //writeSnapshot(bodies, NBODY_CONTEXT, 4);
+      N2BruteForce(bodies, forces, NBODY_CONTEXT);
+      //writeSnapshot(bodies, NBODY_CONTEXT, 5);
+      
       for (int i = n0; i<n1; i++)
 	{
 	  bodies[i].u1 += 0.9785 * forces[i][0] * h; //Convert u to km/s
@@ -226,10 +230,19 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	{
 	  bodies[m] = bodiesArr[m];
 	}
+      MPI_Barrier(MPI_COMM_WORLD);
 
       //MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
 
       currentTime += h;
+      iteration += 1;
+
+      if (iteration % NBODY_CONTEXT.SNAPSHOTS_EVERY_N == 0)
+	{
+	  writeSnapshot(bodies, NBODY_CONTEXT, snapshot_number);
+	  snapshot_number += 1;
+	}
+      
       printf("Current time is %10.10f.\n",currentTime);
 
       if(rank == 0)

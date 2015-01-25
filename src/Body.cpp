@@ -85,20 +85,20 @@ int readASCII(vector<bodies_t>& bodies,string path)
 	  Body.id = atoi(values[0].c_str());
 	  
 	  Body.type = atoi(values[1].c_str());
+
+          Body.mass = atof(values[2].c_str());
 	
-	  Body.q1 = atof(values[2].c_str());
+	  Body.q1 = atof(values[3].c_str());
 	  
-	  Body.q2 = atof(values[3].c_str());
+	  Body.q2 = atof(values[4].c_str());
 	 
-	  Body.q3 = atof(values[4].c_str());	  
+	  Body.q3 = atof(values[5].c_str());	  
       
-	  Body.u1 = atof(values[5].c_str());
+	  Body.u1 = atof(values[6].c_str());
 	  
-	  Body.u2 = atof(values[6].c_str());
+	  Body.u2 = atof(values[7].c_str());
   
-	  Body.u3 = atof(values[7].c_str());
-	 
-	  Body.mass = atof(values[8].c_str());
+	  Body.u3 = atof(values[8].c_str());
 	  
 	  bodies.push_back(Body);
      
@@ -124,7 +124,7 @@ int writeSnapshot(vector<bodies_t> &bodies, context_t &context, int snapshot_num
   string PATH;
 
 
-  ss << context.OUTPUT_PATH << "_" << snapshot_number;
+  ss << context.OUTPUT_PATH << "snapshot_" << snapshot_number;
   PATH = ss.str();
   output.open(PATH.c_str());
 

@@ -21,19 +21,24 @@ vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
   double dy = p.q2 - q.q2;
   double dz = p.q3 - q.q3;
 
+  //printf("Body p has position: [%10.10f, %10.10f, %10.10f]\n",p.q1,p.q2,p.q3);
+  //printf("Body q has position: [%10.10f, %10.10f, %10.10f]\n",q.q1,q.q2,q.q3);
+
+
   double dr2 = pow(dx,2) + pow(dy,2) + pow(dz,2);
-  //printf("The distance is %10.5f.\n", pow(dr2,0.5));
+  //printf("The distance is %10.10f.\n", pow(dr2,0.5));
 
   double forceMag =  G * (p.mass * q.mass) / (dr2 + eps2);
-  double forceQuotient = -forceMag/pow(dr2,1.0/2.0);
-  
+  double forceQuotient = -forceMag/pow(dr2,0.5);
+  //printf("The force quotient is %10.10f\n", forceQuotient);
+
   double forceArr[] = {forceQuotient * dx, forceQuotient * dy, forceQuotient * dz};
   vector<double> force(forceArr, forceArr + sizeof(forceArr));
   //printf("The force is %10.5f.\n", forceMag);
   return force;
 }
 
-int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, double spaceVolume, double eps2)
+int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, context_t &NBODY_CONTEXT)
 { 
   // check if all particles are in the domain.  This should be
   // an O(n) operation. Throw exception if a particle has left 
@@ -49,7 +54,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   int N = bodies.size();
   
-  double L = 0.5 * pow(spaceVolume, 1.0/3.0);
+  double L = 0.5 * pow(NBODY_CONTEXT.INIT3VOLUME, 1.0/3.0);
   domain_t masterDomain;
   
   masterDomain.x0 = -L;
@@ -127,7 +132,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
 	{
 	  if (i != j) // This is necessary to avoid computing "self" force.
 	    {
-	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], 0.0); // temporarily set eps2 = 0     	      
+	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], NBODY_CONTEXT.EPS2); // temporarily set eps2 = 0     	      
 	      //printf("The force on %d is [%10.5f, %10.5f, %10.5f]\n",i, force[0], force[1], force[2]);
 	      forceOnI[0] += force[0];
 	      forceOnI[1] += force[1];
@@ -158,6 +163,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, doub
 */
 
 
+/*
 int BarnesHut(vector<bodies_t> &bodies, vector<vector<double> > &forces,double spaceVolume, double eps2)
 {
   int N = bodies.size(); // number of bodies
@@ -184,3 +190,4 @@ int BarnesHut(vector<bodies_t> &bodies, vector<vector<double> > &forces,double s
 
   return 0;
 }
+*/

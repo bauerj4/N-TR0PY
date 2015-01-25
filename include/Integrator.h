@@ -7,4 +7,4 @@ using namespace std;
 
 //double computeTimestep();
 
-vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int numberOfSteps, context_t &NBODY_CONTEXT);
+vector<bodies_t> EulerMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, int &snapshot_number);

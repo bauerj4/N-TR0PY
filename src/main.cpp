@@ -26,16 +26,10 @@ int main(int argc, char *argv[])
   readASCII(bodies, NBODY_CONTEXT.BODIES_FILE_PATH);
   //printf("Bodies loaded.\n");
 
-
-  //NBODY_CONTEXT.EPS2 = 0.0;
-  //NBODY_CONTEXT.INIT3VOLUME = 10.0;
-  //NBODY_CONTEXT.COSMOLOGY = "FLAT LAMBDA-CDM";
-
-
-  double evolveTime = 1.0; // Gy
-  int NStep = 500;
+  writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
+  current_snapshot += 1;
   
-  bodies = EulerMethod(bodies, evolveTime, NStep, NBODY_CONTEXT); // This function should take an integration scheme specifier
+  bodies = EulerMethod(bodies, NBODY_CONTEXT, current_snapshot); // This function should take an integration scheme specifier
   // maybe just pass &NBODY_CONTEXT?
 
   /*
@@ -46,7 +40,7 @@ int main(int argc, char *argv[])
   int rank;
   
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
+  MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0)
     {
       printf("Writing output...\n");
