@@ -83,35 +83,28 @@ int readASCII(vector<bodies_t>& bodies,string path)
 	  delimitString(values, line, delim);
 	 
 	  Body.id = atoi(values[0].c_str());
-	  //cout << "ID allocated. " << endl;
+	  
 	  Body.type = atoi(values[1].c_str());
-	  //cout << "Type allocated." << endl;
+	
 	  Body.q1 = atof(values[2].c_str());
-	  //cout << "Body position 1 allocated. " << endl;
+	  
 	  Body.q2 = atof(values[3].c_str());
-	  //cout << "Body position 2 allocated. " << endl;
+	 
 	  Body.q3 = atof(values[4].c_str());	  
-	  //cout << "Body position 3 allocated. " << endl;
+      
 	  Body.u1 = atof(values[5].c_str());
-	  //cout << "Body velocity 1 allocated. " << endl;	  
+	  
 	  Body.u2 = atof(values[6].c_str());
-	  //cout << "Body velocity 2 allocated. " << endl;
+  
 	  Body.u3 = atof(values[7].c_str());
-	  //cout << "Body velocity 3 allocated. " << endl;
 	 
 	  Body.mass = atof(values[8].c_str());
-	  //cout << "Body properties allocated." << endl;
-	  bodies.push_back(Body);
-	  //cout << "Body pushed." << endl;
-	  //	  delete[] (&Body);
 	  
-	  //cout << "Iteration " << i << " completed." <<endl;
-	  /* cout << "Position of body " << i << " is [" 
-	    + values[2] + ", " + values[3] + ", " + values[4]
-	    + "]" << endl;*/
+	  bodies.push_back(Body);
+     
 	  i++;
 	}
-      //cout << bodies[0].type << endl << bodies[1].type << endl;
+   
       file.close();
       return 0;
     }
@@ -123,3 +116,28 @@ int readASCII(vector<bodies_t>& bodies,string path)
     }
 }
 
+int writeSnapshot(vector<bodies_t> &bodies, context_t &context, int snapshot_number)
+{
+  ofstream output;
+  stringstream ss;
+  string PATH;
+
+
+  ss << context.OUTPUT_PATH << "_" << snapshot_number;
+  PATH = ss.str();
+  output.open(PATH.c_str());
+
+  for (int i = 0; i < bodies.size(); i++)
+    {
+      output << bodies[i].id << " ";
+      output << bodies[i].type << " ";
+      output << bodies[i].mass << " ";
+      output << bodies[i].q1 << " ";
+      output << bodies[i].q2 << " ";
+      output << bodies[i].q3 << " ";
+      output << bodies[i].u1 << " ";
+      output << bodies[i].u2 << " ";
+      output << bodies[i].u3 << "\n";
+    }
+  return 0;
+}

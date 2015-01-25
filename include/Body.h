@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include "mpi.h"
+#include "Context.h"
 
 using namespace std;
 
@@ -24,15 +25,6 @@ struct bodies_t
   double u3;
 };
 
-//The offset array is: {0,4,8,16,24,32,40,48,56}
-/*MPI_Datatype MPI_BODY;
-int  counts[] = {1,1,1,1,1,1,1,1};
-int  offsets[] = {0,4,8,16,24,32,40,48,56};
-MPI_Datatype types[] = {MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
-
-MPI_Type_struct(9, counts, offsets,types, &MPI_BODY);
-MPI_Type_commmit(MPI_BODY);*/
-
 /*
   For now, I intend to only support an ASCII output format,
   but I intend to implement a read method which will support 
@@ -42,3 +34,4 @@ MPI_Type_commmit(MPI_BODY);*/
 MPI_Datatype createMPIBody();
 int delimitString(vector<string>& tokens, string line, string delimiter);
 int readASCII(vector<bodies_t>& bodies,string path);
+int writeSnapshot(vector<bodies_t> &bodies, context_t &context, int num);

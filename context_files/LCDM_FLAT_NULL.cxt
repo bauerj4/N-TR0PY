@@ -20,8 +20,8 @@ NSTEP = 10000
 
 SUPPRESS_DIAGNOSTICS = true
 
-BODIES_FILE_PATH = ./test/TwoBody.dat
+BODIES_FILE_PATH = ./test/two_body_springel/TwoBody.dat
 
-SNAPSHOT_PATH = ./test/
+SNAPSHOT_PATH = ./test/two_body_springel/
 
 SNAPSHOTS_EVERY_N = 100

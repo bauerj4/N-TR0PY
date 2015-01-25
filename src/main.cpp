@@ -12,9 +12,10 @@ int main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
 
-  //string path = "./test/TwoBody.dat";
   string ctx_path_string = "./context_files/LCDM_FLAT_NULL.cxt";
   char * ctx_path = (char*)ctx_path_string.c_str();
+
+  int current_snapshot = 0;
   
   context_t NBODY_CONTEXT;
 
@@ -41,6 +42,16 @@ int main(int argc, char *argv[])
     Get simulation context and pass it to the integrator.
     Choose the integrator.  
    */
+
+  int rank;
+  
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0)
+    {
+      writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
+    }
+  
   MPI_Finalize();
   return 0;
 }
