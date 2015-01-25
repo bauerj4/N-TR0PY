@@ -230,7 +230,7 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
       //MPI_Bcast(bodiesArr, N, MPI_BODY,0, MPI_COMM_WORLD );
 
       currentTime += h;
-      //      printf("Current time is %10.10f.\n",currentTime);
+      printf("Current time is %10.10f.\n",currentTime);
 
       if(rank == 0)
 	{
@@ -240,7 +240,7 @@ vector<bodies_t> EulerMethod(vector<bodies_t> bodies, double evolveTime, int num
 	      //printf("The data for body %d is:\n",i);
 	      //printf("r = [%5.10f, %5.10f, %5.10f]\n", bodies[i].q1,bodies[i].q2,bodies[i].q3);
 	      //printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);
-	      printf("%5.10f\n", pow(pow(bodies[i].q1,2) + pow(bodies[i].q2, 2) + pow(bodies[i].q3,2),0.5));
+	      //printf("%5.10f\n", pow(pow(bodies[i].q1,2) + pow(bodies[i].q2, 2) + pow(bodies[i].q3,2),0.5));
 	    }
 	}
 

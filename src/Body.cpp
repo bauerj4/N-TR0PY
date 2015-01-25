@@ -63,7 +63,7 @@ int delimitString(vector<string> &tokens, string line, string delimiter)
 int readASCII(vector<bodies_t>& bodies,string path)
 {
   ifstream file;
-  cout << "THE PATH IS: " << path << '\n';
+  //cout << "THE PATH IS: " << path << '\n';
   file.open(path.c_str(), ifstream::in);
   string line;
   
@@ -77,7 +77,7 @@ int readASCII(vector<bodies_t>& bodies,string path)
 	  //double body_q1, body_q2, body_q3;
 	  //double body_u1, body_u2, body_u3;
 	  
-
+	  //cout << line << "\n";
 	  vector<string> values;
 	  string delim = " ";
 	  delimitString(values, line, delim);
@@ -103,6 +103,7 @@ int readASCII(vector<bodies_t>& bodies,string path)
 	  bodies.push_back(Body);
      
 	  i++;
+	  //printf("Iteration %d in reading completeted.\n",i);
 	}
    
       file.close();

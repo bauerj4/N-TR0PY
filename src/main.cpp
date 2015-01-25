@@ -12,8 +12,8 @@ int main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
 
-  string ctx_path_string = "./context_files/LCDM_FLAT_NULL.cxt";
-  char * ctx_path = (char*)ctx_path_string.c_str();
+  char * ctx_path = argv[1];
+  //char * ctx_path = (char*)ctx_path_string.c_str();
 
   int current_snapshot = 0;
   
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
   vector<bodies_t> bodies;
   readASCII(bodies, NBODY_CONTEXT.BODIES_FILE_PATH);
-
+  //printf("Bodies loaded.\n");
 
 
   //NBODY_CONTEXT.EPS2 = 0.0;
@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
 
   if (rank == 0)
     {
+      printf("Writing output...\n");
       writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
     }
   
