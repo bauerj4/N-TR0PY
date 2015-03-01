@@ -8,3 +8,6 @@ using namespace std;
 //double computeTimestep();
 
 vector<bodies_t> EulerMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, int &snapshot_number);
+
+vector<bodies_t> KDKMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, int &snapshot_number);
+

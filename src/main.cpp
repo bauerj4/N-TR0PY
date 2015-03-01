@@ -26,12 +26,12 @@ int main(int argc, char *argv[])
   readASCII(bodies, NBODY_CONTEXT.BODIES_FILE_PATH);
   //printf("Bodies loaded.\n");
 
-  writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
-  current_snapshot += 1;
-  
-  bodies = EulerMethod(bodies, NBODY_CONTEXT, current_snapshot); // This function should take an integration scheme specifier
+  //writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
+  //current_snapshot += 1;
+  MPI_Barrier(MPI_COMM_WORLD);
+  bodies = KDKMethod(bodies, NBODY_CONTEXT, current_snapshot); // This function should take an integration scheme specifier
   // maybe just pass &NBODY_CONTEXT?
-
+  MPI_Barrier(MPI_COMM_WORLD);
   /*
     Get simulation context and pass it to the integrator.
     Choose the integrator.  
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
   if (rank == 0)
     {
       printf("Writing output...\n");
-      writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
+      //writeSnapshot(bodies, NBODY_CONTEXT, current_snapshot);
     }
   
   MPI_Finalize();

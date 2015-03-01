@@ -117,7 +117,7 @@ int readASCII(vector<bodies_t>& bodies,string path)
     }
 }
 
-int writeSnapshot(vector<bodies_t> &bodies, context_t &context, int snapshot_number)
+int writeSnapshot(vector<bodies_t> &bodies, context_t &context, vector<double> &times, vector<double> &energies, int &snapshot_number)
 {
   ofstream output;
   stringstream ss;
@@ -140,5 +140,21 @@ int writeSnapshot(vector<bodies_t> &bodies, context_t &context, int snapshot_num
       output << bodies[i].u2 << " ";
       output << bodies[i].u3 << "\n";
     }
+
+  output.close();
+  if (context.SUPPRESS_DIAGNOSTICS==0)
+    {
+      ss << "_energies";
+      PATH = ss.str();
+      output.open(PATH.c_str());
+      
+      for (int i = 0; i < times.size(); i++)
+	{
+	  output << times[i] << " ";
+	  output << energies[i] << "\n";
+	}
+    }
+  
   return 0;
 }
+

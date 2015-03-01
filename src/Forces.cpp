@@ -10,12 +10,12 @@ using namespace std;
   This module contains force calculation methods.
 */
 
-
+double G = 4.49209e-6;
 // Compute the force between body p and q
 
-vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
+vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2, double &U)
 {
-  double G = 4.49e-6; // kpc^3 / Gy^2 M_solar
+  double G = 4.49209e-6; // kpc^3 / Gy^2 M_solar
 
   double dx = p.q1 - q.q1;
   double dy = p.q2 - q.q2;
@@ -28,17 +28,25 @@ vector<double> PairForceCalculation(bodies_t &p, bodies_t &q, double eps2)
   double dr2 = pow(dx,2) + pow(dy,2) + pow(dz,2);
   //printf("The distance is %10.10f.\n", pow(dr2,0.5));
 
-  double forceMag =  G * (p.mass * q.mass) / (dr2 + eps2);
-  double forceQuotient = -forceMag/pow(dr2,0.5);
+  double forceMag =  -  G * (q.mass) / pow((dr2 + eps2),1.5);
+  U = -G * q.mass / pow(dr2,0.5);
+  //double forceQuotient = -forceMag/pow(dr2,0.5);
   //printf("The force quotient is %10.10f\n", forceQuotient);
+  //printf("The masses are %10.10f, %10.10f.\n",p.mass,q.mass);
 
-  double forceArr[] = {forceQuotient * dx, forceQuotient * dy, forceQuotient * dz};
-  vector<double> force(forceArr, forceArr + sizeof(forceArr));
+  //double forceArr[] = {forceMag * dx, forceMag * dy, forceMag * dz};
+  //vector<double> force(forceArr, forceArr + sizeof(forceArr));
+
+  vector<double> force(3,0.0);
+  force[0] = dx * forceMag;
+  force[1] = dy * forceMag;
+  force[2] = dz * forceMag;
   //printf("The force is %10.5f.\n", forceMag);
+  //printf("Force Mag: %10.10f\n", forceMag);
   return force;
 }
 
-int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, context_t &NBODY_CONTEXT)
+int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, context_t &NBODY_CONTEXT, vector<double> &energies)
 { 
   // check if all particles are in the domain.  This should be
   // an O(n) operation. Throw exception if a particle has left 
@@ -123,27 +131,93 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, cont
   */
 
   MPI_Barrier(MPI_COMM_WORLD);
+  double U_total = 0;
+  //double keplerian_expected = 0;
 
   for (int i = n0; i < (n1);i++)
     {
       //printf("Computing force on Body %d...\n", bodies[i].id);
       vector<double> forceOnI(3,0.0);
+      double U;
+      //double T_total;
+
       for (int j = 0; j < N; j++)
 	{
 	  if (i != j) // This is necessary to avoid computing "self" force.
 	    {
-	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], NBODY_CONTEXT.EPS2); // temporarily set eps2 = 0     	      
+	      vector<double> force = PairForceCalculation(bodies[i],bodies[j], NBODY_CONTEXT.EPS2, U); // temporarily set eps2 = 0     	      
 	      //printf("The force on %d is [%10.5f, %10.5f, %10.5f]\n",i, force[0], force[1], force[2]);
+	      //printf("U = %10.10f\n", U);
 	      forceOnI[0] += force[0];
 	      forceOnI[1] += force[1];
 	      forceOnI[2] += force[2];
+	      U_total += U;
 	    }	  
-	  forces[i] = forceOnI;
 	}
-      
+      forces[i] = forceOnI;
+      forceOnI[0] = 0.;
+      forceOnI[1] = 0.;
+      forceOnI[2] = 0.;
+	
     }
 
-  MPI_Barrier(MPI_COMM_WORLD); // Synchronize before integration.
+  if (rank != 0 && NBODY_CONTEXT.SUPPRESS_DIAGNOSTICS==0)
+    {
+      MPI_Send(&U_total, 1, MPI_DOUBLE, 0, rank,  MPI_COMM_WORLD);
+    }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if(rank == 0 && NBODY_CONTEXT.SUPPRESS_DIAGNOSTICS==0)
+    {
+      double U_temp;
+      double keplerian;
+      
+      for (int j = 1; j < nthreads; j++)
+	{
+	  MPI_Status status;
+	  MPI_Recv(&U_temp, 1, MPI_DOUBLE, j, j, MPI_COMM_WORLD,&status);
+	  U_total += U_temp;
+	  U_temp = 0.;
+	}
+      double T_total = 0;
+      for (int i = 0; i < N; i++)
+	{
+	  T_total += bodies[i].u1*bodies[i].u1 + bodies[i].u2 * bodies[i].u2 + bodies[i].u3 * bodies[i].u3;
+	}
+
+      double dx = bodies[0].q1 - bodies[1].q1;
+      double dy = bodies[0].q2 - bodies[1].q2;
+      double dz = bodies[0].q3 - bodies[1].q3;
+
+      double dr = pow(dx*dx + dy*dy + dz*dz,0.5);
+
+      keplerian = -G * bodies[0].mass / (2. * 0.0010000) + 0.000007; // Initial energy guess is off in the 7th decimal place
+      T_total /= 2.00000000000;
+      T_total *= 1.022/*69032072*/* 1.022;//69032072;
+      U_total /= 2.00000000000;
+
+      printf("(T,U,E) = (%10.10f, %10.10f, %10.10f) -> %10.10f\n", T_total, U_total, T_total+U_total, keplerian - (T_total + U_total));
+      double energy = log10(fabs((U_total + T_total - keplerian)/keplerian));
+
+      printf("PLOT VALUE IS: %10.10f\n",energy);
+      energies.push_back(energy);
+      //printf("The total energy is %10.10f\n", energy);
+
+      T_total = 0;
+      //U_total = 0;
+      energy = 0;
+    }
+  U_total = 0;
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  //forceOnI[0] = 0.;
+  //forceOnI[1] = 0.;
+  // forceOnI[2] = 0.;
+                                                    
+  
+      
+}
+// Synchronize before integration.
   
 
   /*
@@ -154,7 +228,7 @@ int N2BruteForce(vector<bodies_t> &bodies, vector<vector<double> > &forces, cont
     mix up the order of the forces.  Each MPI thread has its OWN copy of bodies[] and
     will thus need to be synchronized.  
   */  
-}
+
 
 
 /*

@@ -34,7 +34,7 @@ int readContext(char * PATH, context_t &context)
 	{
 	  if(tokens[j] == "SUPPRESS_DIAGNOSTICS")
             {
-              context.SNAPSHOTS_EVERY_N =  atoi(tokens[j + 2].c_str());
+              context.SUPPRESS_DIAGNOSTICS =  atoi(tokens[j + 2].c_str());
             }
 
           if(tokens[j] == "SNAPSHOTS_EVERY_N")

@@ -34,4 +34,4 @@ struct bodies_t
 MPI_Datatype createMPIBody();
 int delimitString(vector<string>& tokens, string line, string delimiter);
 int readASCII(vector<bodies_t>& bodies,string path);
-int writeSnapshot(vector<bodies_t> &bodies, context_t &context, int num);
+int writeSnapshot(vector<bodies_t> &bodies, context_t &context, vector<double> &times, vector<double> &e, int &num);
