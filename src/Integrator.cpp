@@ -408,7 +408,7 @@ vector<bodies_t> KDKMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, i
 	  
 	}
 
-      printf("First force calculation completed on thread %d.\n",rank);
+      //printf("First force calculation completed on thread %d.\n",rank);
 
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -504,7 +504,7 @@ vector<bodies_t> KDKMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, i
 
           //printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);                                                    
 	}
-      printf("Second force calculation completed on thread %d.\n",rank);
+      //printf("Second force calculation completed on thread %d.\n",rank);
 
       //printf("u = [%5.10f, %5.10f, %5.10f]\n", bodies[i].u1,bodies[i].u2,bodies[i].u3);                                                     
 

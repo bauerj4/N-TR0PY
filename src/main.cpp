@@ -12,6 +12,12 @@ int main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
 
+  int rank;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  
   char * ctx_path = argv[1];
   //char * ctx_path = (char*)ctx_path_string.c_str();
 
@@ -20,7 +26,10 @@ int main(int argc, char *argv[])
   context_t NBODY_CONTEXT;
 
   readContext(ctx_path, NBODY_CONTEXT);
-  printContext(NBODY_CONTEXT);
+  if (rank == 0)
+    {
+      printContext(NBODY_CONTEXT);
+    }
 
   vector<bodies_t> bodies;
   readASCII(bodies, NBODY_CONTEXT.BODIES_FILE_PATH);
@@ -37,9 +46,9 @@ int main(int argc, char *argv[])
     Choose the integrator.  
    */
 
-  int rank;
+  // int rank;
   
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0)
     {
