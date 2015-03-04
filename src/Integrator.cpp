@@ -427,13 +427,13 @@ vector<bodies_t> KDKMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, i
 	      if (j == (nthreads - 1))
 		{
 		  Recvn0 = block * j;
-		  Recvn1 =  remainder + (block + 1)*j;
+		  Recvn1 =  remainder + block + Recvn0;
 		}
 
 	      else
 		{
 		  Recvn0 = block * j;
-		  Recvn1 = Recvn0 + block * (j );
+		  Recvn1 = Recvn0 + block;
 		}
 
 	      expected = Recvn1 - Recvn0;
@@ -521,17 +521,19 @@ vector<bodies_t> KDKMethod(vector<bodies_t> &bodies, context_t &NBODY_CONTEXT, i
 
           for(int j = 1; j<nthreads; j++)
             {
-              if (j == (nthreads - 1))
+	      if (j == (nthreads - 1))
 		{
-                  Recvn0 = block * j;
-                  Recvn1 =  remainder + (block + 1)*j;
-                }
+		  Recvn0 = block * j;
+		  Recvn1 =  remainder + block + Recvn0;
+		}
+	      
+	      else
+		{
+		  Recvn0 = block * j;
+		  Recvn1 = Recvn0 + block;
+		}
 
-              else
-                {
-                  Recvn0 = block * j;
-                  Recvn1 = Recvn0 + block * (j );
-                }
+
 
               expected = Recvn1 - Recvn0;
               bodies_t tempBody[N];
